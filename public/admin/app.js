@@ -729,7 +729,7 @@ function renderQR() {
         <div class="qr-preview-card">
           <div class="panel-header">Preview</div>
           <div class="qr-canvas-wrap">
-            <canvas id="qr-canvas"></canvas>
+            <img id="qr-img" alt="QR code preview" />
           </div>
           <div class="qr-info" id="qr-info"></div>
         </div>
@@ -737,32 +737,30 @@ function renderQR() {
     </section>
   `;
 
-  if (typeof QRious === "undefined") {
-    document.querySelector(".qr-canvas-wrap").innerHTML =
-      '<div class="error" style="margin:20px;">QR library failed to load. Check your internet connection and refresh.</div>';
-    return;
-  }
+  // Use api.qrserver.com — server-rendered QR codes via simple image URL.
+  // No JS library, no canvas issues, always works.
+  let currentUrl = "";
 
-  const qr = new QRious({
-    element: document.getElementById("qr-canvas"),
-    size: 400,
-    value: "https://skdentalgroup.com",
-    foreground: "#0660b0",
-    background: "#ffffff",
-    level: "M",
-  });
+  function buildApiUrl() {
+    const text = $("#qr-url").value || "https://skdentalgroup.com";
+    const size = parseInt($("#qr-size").value, 10) || 400;
+    const fg = ($("#qr-color").value || "#0660b0").replace("#", "");
+    const bg = ($("#qr-bg").value || "#ffffff").replace("#", "");
+    const level = $("#qr-level").value || "M";
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&color=${fg}&bgcolor=${bg}&ecc=${level}&margin=10`;
+  }
 
   function refresh() {
-    // QRious doesn't have a .set({...}) method - properties are set
-    // individually and each one triggers a redraw.
-    qr.value = $("#qr-url").value || "https://skdentalgroup.com";
-    qr.size = parseInt($("#qr-size").value, 10) || 400;
-    qr.foreground = $("#qr-color").value;
-    qr.background = $("#qr-bg").value;
-    qr.level = $("#qr-level").value;
+    const apiUrl = buildApiUrl();
+    currentUrl = apiUrl;
+    const img = $("#qr-img");
+    img.src = apiUrl;
+    const text = $("#qr-url").value || "https://skdentalgroup.com";
+    const size = parseInt($("#qr-size").value, 10) || 400;
     $("#qr-info").innerHTML =
-      `<span class="muted">Encodes <code>${escapeHtml(qr.value)}</code> at ${qr.size}×${qr.size}px</span>`;
+      `<span class="muted">Encodes <code>${escapeHtml(text)}</code> at ${size}×${size}px</span>`;
   }
+
   refresh();
 
   $("#qr-url").addEventListener("input", refresh);
@@ -776,13 +774,32 @@ function renderQR() {
     $("#" + id).addEventListener("change", refresh)
   );
 
-  $("#qr-download").addEventListener("click", () => {
-    const link = document.createElement("a");
-    const fname = "qr-" + (qr.value || "code").replace(/[^a-z0-9]+/gi, "-").slice(0, 40) + ".png";
-    link.download = fname;
-    link.href = $("#qr-canvas").toDataURL("image/png");
-    link.click();
-    toast(`Downloaded ${fname}`, "success");
+  $("#qr-download").addEventListener("click", async () => {
+    const btn = $("#qr-download");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Preparing…';
+    try {
+      const resp = await fetch(currentUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const text = $("#qr-url").value || "qr-code";
+      const fname = "qr-" + text.replace(/[^a-z0-9]+/gi, "-").slice(0, 40) + ".png";
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast(`Downloaded ${fname}`, "success");
+    } catch (e) {
+      toast(`Download failed: ${e.message}. Try right-clicking the QR image and "Save image as".`, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
   });
 }
 
