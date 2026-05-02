@@ -737,6 +737,12 @@ function renderQR() {
     </section>
   `;
 
+  if (typeof QRious === "undefined") {
+    document.querySelector(".qr-canvas-wrap").innerHTML =
+      '<div class="error" style="margin:20px;">QR library failed to load. Check your internet connection and refresh.</div>';
+    return;
+  }
+
   const qr = new QRious({
     element: document.getElementById("qr-canvas"),
     size: 400,
@@ -747,13 +753,13 @@ function renderQR() {
   });
 
   function refresh() {
-    qr.set({
-      value: $("#qr-url").value || "https://skdentalgroup.com",
-      size: parseInt($("#qr-size").value, 10),
-      foreground: $("#qr-color").value,
-      background: $("#qr-bg").value,
-      level: $("#qr-level").value,
-    });
+    // QRious doesn't have a .set({...}) method - properties are set
+    // individually and each one triggers a redraw.
+    qr.value = $("#qr-url").value || "https://skdentalgroup.com";
+    qr.size = parseInt($("#qr-size").value, 10) || 400;
+    qr.foreground = $("#qr-color").value;
+    qr.background = $("#qr-bg").value;
+    qr.level = $("#qr-level").value;
     $("#qr-info").innerHTML =
       `<span class="muted">Encodes <code>${escapeHtml(qr.value)}</code> at ${qr.size}×${qr.size}px</span>`;
   }
