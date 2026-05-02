@@ -331,4 +331,28 @@ $("#pat").addEventListener("keydown", (e) => {
 });
 $("#btn-logout").addEventListener("click", logout);
 
-tryAutoLogin();
+// One-time login via URL fragment (#t=...). Used for the assistant-driven
+// first login; the token is then stored in localStorage and the URL cleaned
+// so it never reaches a server log.
+async function consumeUrlToken() {
+  const m = location.hash.match(/[#&]t=([^&]+)/);
+  if (!m) return false;
+  const tok = decodeURIComponent(m[1]);
+  localStorage.setItem(TOKEN_KEY, tok);
+  // Strip the token from the URL immediately (no server logs, no shoulder-surfing)
+  history.replaceState(null, "", location.pathname + location.search + "#/dashboard");
+  try {
+    const me = await getCurrentUser();
+    showApp(me);
+    toast(`Signed in as ${me.login}`, "success");
+    return true;
+  } catch (e) {
+    localStorage.removeItem(TOKEN_KEY);
+    return false;
+  }
+}
+
+(async function boot() {
+  if (await consumeUrlToken()) return;
+  tryAutoLogin();
+})();
