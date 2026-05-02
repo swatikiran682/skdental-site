@@ -147,17 +147,86 @@ body{--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: 
     <html>    
     <body>
     <style>
+        /* Hero — animated gradient background with optional video */
         .custom-ss-text-background{
-            background: url("3") no-repeat center center;
-            background-size: cover;
+            position: relative;
             height: 570px;
             overflow: hidden;
-            position:relative;
-            padding:0px;
-            
+            padding: 0;
+            background: linear-gradient(135deg, #044a87 0%, #0660b0 25%, #2980b9 50%, #1e5cb8 75%, #044a87 100%);
+            background-size: 400% 400%;
+            animation: heroGradient 18s ease infinite;
+        }
+        @keyframes heroGradient {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        /* Real video, when src is set */
+        .hero-video {
+            position: absolute;
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .hero-video[src=""], .hero-video:not([src]) { display: none; }
+        /* Subtle floating sparkles for depth */
+        .hero-particles {
+            position: absolute; inset: 0;
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .hero-particles span {
+            position: absolute;
+            color: rgba(255,255,255,0.18);
+            font-size: 22px;
+            user-select: none;
+            animation: floatUp 18s linear infinite;
+        }
+        .hero-particles span:nth-child(2) { font-size: 32px; color: rgba(255,255,255,0.10); }
+        .hero-particles span:nth-child(3) { font-size: 18px; color: rgba(255,255,255,0.22); }
+        .hero-particles span:nth-child(5) { font-size: 28px; color: rgba(255,255,255,0.12); }
+        .hero-particles span:nth-child(7) { font-size: 24px; color: rgba(255,255,255,0.16); }
+        @keyframes floatUp {
+            0%   { transform: translateY(120%) rotate(0deg);   opacity: 0; }
+            10%  { opacity: 1; }
+            90%  { opacity: 1; }
+            100% { transform: translateY(-120%) rotate(360deg); opacity: 0; }
+        }
+        /* Make sure the existing overlay sits above gradient/video but below text */
+        .custom-ss-text-background-overlay {
+            background: linear-gradient(180deg, rgba(4,74,135,0.35) 0%, rgba(6,96,176,0.55) 100%) !important;
+            z-index: 2;
+        }
+        .custom-ss-text-background > .container { position: relative; z-index: 3; }
+        /* Slight upgrade to the headline so it pops on the gradient */
+        .custom-ss-quote {
+            text-shadow: 0 2px 12px rgba(0,0,0,0.35);
+            letter-spacing: 0.5px;
+        }
+        .custom-ss-welcome-quote {
+            text-shadow: 0 1px 8px rgba(0,0,0,0.30);
         }
     </style>
         <div class="container-fluid custom-ss-text-background">
+        <!-- HERO VIDEO: paste a real .mp4 URL into the src below to enable a video background.
+             Until then, the animated gradient + sparkles will show. -->
+        <video class="hero-video" autoplay muted loop playsinline preload="auto" src=""
+               poster="/wp-content/themes/skdental/img/Dental-Fargo.jpg"></video>
+        <div class="hero-particles" aria-hidden="true">
+            <span style="left:8%;  top:0%;  animation-delay:0s;">✦</span>
+            <span style="left:22%; top:0%;  animation-delay:3s;">✧</span>
+            <span style="left:38%; top:0%;  animation-delay:6s;">✦</span>
+            <span style="left:54%; top:0%;  animation-delay:1.5s;">✧</span>
+            <span style="left:68%; top:0%;  animation-delay:4.5s;">✦</span>
+            <span style="left:82%; top:0%;  animation-delay:7.5s;">✧</span>
+            <span style="left:92%; top:0%;  animation-delay:2s;">✦</span>
+        </div>
         <span class="custom-ss-text-background-overlay"></span>
                         <div class="container">
                     <div class="row">
