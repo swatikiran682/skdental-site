@@ -352,58 +352,224 @@ function renderEditorBody(page) {
   const body = $("#editor-body");
   body.classList.remove("loading");
   body.innerHTML = `
-    <div class="editor-grid">
-      <div class="editor-panel">
-        <div class="panel-header">HTML source — edit here</div>
-        <textarea id="html-editor" spellcheck="false"></textarea>
+    <div class="visual-editor">
+      <div class="vis-toolbar">
+        <span class="vis-hint">
+          <span class="hint-step"><kbd>1</kbd> Hover any text</span>
+          <span class="hint-arrow">→</span>
+          <span class="hint-step"><kbd>2</kbd> Click to edit, or use the X button to delete</span>
+          <span class="hint-arrow">→</span>
+          <span class="hint-step"><kbd>3</kbd> Save changes (top right)</span>
+        </span>
       </div>
-      <div class="editor-panel">
-        <div class="panel-header">Live preview</div>
-        <iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin"></iframe>
-      </div>
+      <iframe id="preview-frame" class="preview-frame full" sandbox="allow-same-origin allow-scripts"></iframe>
     </div>
   `;
-  const textarea = $("#html-editor");
-  textarea.value = editorState.originalContent;
 
-  // Initial preview
-  updatePreview(textarea.value);
-
-  // Track modifications + debounced preview refresh
-  let debounceTimer;
-  textarea.addEventListener("input", () => {
-    const modified = textarea.value !== editorState.originalContent;
-    $("#btn-save").disabled = !modified;
-    $("#btn-revert").disabled = !modified;
-    setMeta(modified ? "Unsaved changes" : "No changes", modified ? "modified" : "");
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => updatePreview(textarea.value), 400);
-  });
-
-  $("#btn-save").onclick = () => saveChanges(page);
-  $("#btn-revert").onclick = () => {
-    if (confirm("Discard your unsaved changes?")) {
-      textarea.value = editorState.originalContent;
-      $("#btn-save").disabled = true;
-      $("#btn-revert").disabled = true;
-      updatePreview(textarea.value);
-      setMeta("Reverted", "");
-    }
-  };
-
-  setMeta("Loaded from GitHub", "saved");
-}
-
-function updatePreview(html) {
   const iframe = $("#preview-frame");
-  if (!iframe) return;
-  // Use srcdoc so root-relative URLs in the HTML work against the live origin
-  // Inject a <base> tag so /wp-content/, /wp-includes/ etc. resolve correctly
-  let injected = html;
+  let injected = editorState.originalContent;
   if (!/<base\s/i.test(injected)) {
     injected = injected.replace(/<head([^>]*)>/i, '<head$1>\n<base href="https://skdentalgroup.com/">');
   }
   iframe.srcdoc = injected;
+
+  iframe.addEventListener("load", () => {
+    injectVisualEditMode(iframe);
+  }, { once: true });
+
+  $("#btn-save").onclick = () => saveChanges(page);
+  $("#btn-revert").onclick = () => {
+    if (confirm("Discard your unsaved changes? The page will reload from GitHub.")) {
+      renderEditor(EDITABLE_PAGES.indexOf(page) === -1 ? 0 : EDITABLE_PAGES.indexOf(page));
+    }
+  };
+
+  setMeta("Loaded from GitHub. Hover any text to start editing.", "saved");
+}
+
+function injectVisualEditMode(iframe) {
+  const doc = iframe.contentDocument;
+  const win = iframe.contentWindow;
+  if (!doc || !doc.body) return;
+
+  // Edit-mode CSS injected into the iframe document
+  const style = doc.createElement("style");
+  style.id = "__admin-edit-styles";
+  style.textContent = `
+    [data-admin-hover] {
+      outline: 2px dashed #2c7be5 !important;
+      cursor: pointer !important;
+      position: relative !important;
+    }
+    [data-admin-selected] {
+      outline: 2px solid #f98d00 !important;
+      background-color: rgba(255, 251, 230, 0.6) !important;
+    }
+    [data-admin-editing] {
+      outline: 2px solid #f98d00 !important;
+      background-color: #fff !important;
+    }
+    [data-admin-modified]::after {
+      content: "● modified";
+      position: absolute;
+      top: -22px; right: 0;
+      font-family: -apple-system, sans-serif;
+      font-size: 10px;
+      background: #1f8a4f; color: #fff;
+      padding: 2px 6px; border-radius: 3px;
+      pointer-events: none;
+      z-index: 100000;
+    }
+    .__admin-delete-btn {
+      position: absolute;
+      top: -14px; right: -14px;
+      width: 28px; height: 28px;
+      background: #c53030; color: #fff;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      font-family: -apple-system, sans-serif;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 100001;
+      line-height: 1;
+    }
+    .__admin-delete-btn:hover { background: #9b2424; transform: scale(1.1); }
+  `;
+  doc.head.appendChild(style);
+
+  // Disable existing scripts' navigation by intercepting clicks on links
+  doc.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", (e) => e.preventDefault());
+  });
+  // Disable form submissions
+  doc.querySelectorAll("form").forEach((f) => {
+    f.addEventListener("submit", (e) => e.preventDefault());
+  });
+
+  let hovered = null;
+  let selected = null;
+
+  function isEditable(el) {
+    if (!el || el.nodeType !== 1) return false;
+    const skip = ["HTML", "BODY", "HEAD", "SCRIPT", "STYLE", "META", "LINK", "BASE", "TITLE", "NOSCRIPT", "IFRAME"];
+    if (skip.includes(el.tagName)) return false;
+    // Skip our own injected helpers
+    if (el.classList && el.classList.contains("__admin-delete-btn")) return false;
+    if (el.id === "__admin-edit-styles") return false;
+    // Must have direct text content (not just nested)
+    const hasOwnText = Array.from(el.childNodes).some(
+      (n) => n.nodeType === 3 && n.textContent.trim().length > 0
+    );
+    // Also allow images & buttons (purely structural elements)
+    const isMedia = ["IMG", "BUTTON", "INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
+    return hasOwnText || isMedia;
+  }
+
+  function clearHover() {
+    if (hovered) {
+      hovered.removeAttribute("data-admin-hover");
+      hovered = null;
+    }
+  }
+
+  function clearSelection() {
+    if (selected) {
+      selected.removeAttribute("data-admin-selected");
+      selected.removeAttribute("data-admin-editing");
+      selected.contentEditable = "false";
+      const btn = selected.querySelector(":scope > .__admin-delete-btn");
+      if (btn) btn.remove();
+      selected = null;
+    }
+  }
+
+  function selectElement(el) {
+    clearSelection();
+    if (!isEditable(el)) return;
+    selected = el;
+    el.setAttribute("data-admin-selected", "");
+
+    // Add delete button overlay on the element
+    if (getComputedStyle(el).position === "static") {
+      el.style.position = "relative";
+    }
+    const btn = doc.createElement("button");
+    btn.className = "__admin-delete-btn";
+    btn.title = "Delete this element";
+    btn.textContent = "×";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const what = (el.textContent || el.tagName).trim().slice(0, 40);
+      if (win.confirm(`Delete this element? "${what}…"`)) {
+        el.remove();
+        selected = null;
+        markDirty();
+      }
+    });
+    el.appendChild(btn);
+
+    // Make the element editable on next click
+    setTimeout(() => {
+      if (!selected) return;
+      selected.setAttribute("data-admin-editing", "");
+      selected.removeAttribute("data-admin-selected");
+      selected.contentEditable = "true";
+      // Place caret at end
+      const range = doc.createRange();
+      range.selectNodeContents(selected);
+      range.collapse(false);
+      const sel = win.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      selected.focus();
+    }, 0);
+  }
+
+  doc.addEventListener("mouseover", (e) => {
+    if (selected) return;
+    const t = e.target;
+    if (!isEditable(t) || t === hovered) return;
+    clearHover();
+    t.setAttribute("data-admin-hover", "");
+    hovered = t;
+  });
+  doc.addEventListener("mouseout", (e) => {
+    if (e.target === hovered) {
+      clearHover();
+    }
+  });
+
+  doc.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target.classList && target.classList.contains("__admin-delete-btn")) return;
+    if (selected && selected.contains(target)) return; // already editing this; allow text selection
+    e.preventDefault();
+    e.stopPropagation();
+    clearHover();
+    selectElement(target);
+  }, true);
+
+  doc.addEventListener("input", (e) => {
+    if (e.target === selected || (selected && selected.contains(e.target))) {
+      markDirty();
+      selected.setAttribute("data-admin-modified", "");
+    }
+  });
+
+  // Click outside (in parent) to deselect — use parent message
+  win.__exitEdit = clearSelection;
+
+  function markDirty() {
+    if (!editorState.dirty) {
+      editorState.dirty = true;
+      $("#btn-save").disabled = false;
+      $("#btn-revert").disabled = false;
+      setMeta("Unsaved changes — click Save changes when ready", "modified");
+    }
+  }
 }
 
 function setMeta(text, cls) {
@@ -411,9 +577,55 @@ function setMeta(text, cls) {
   el.innerHTML = `<span class="${cls}">${escapeHtml(text)}</span>`;
 }
 
+function serializeIframeForSave(iframe) {
+  const doc = iframe.contentDocument;
+  if (!doc) return null;
+
+  // Clone so we don't mutate what the user is looking at
+  const clone = doc.documentElement.cloneNode(true);
+
+  // Strip our injected helpers
+  const ourStyle = clone.querySelector("#__admin-edit-styles");
+  if (ourStyle) ourStyle.remove();
+  clone.querySelectorAll(".__admin-delete-btn").forEach((b) => b.remove());
+
+  // Remove our edit-mode attributes/classes from every element
+  clone.querySelectorAll("[data-admin-hover]").forEach((e) => e.removeAttribute("data-admin-hover"));
+  clone.querySelectorAll("[data-admin-selected]").forEach((e) => e.removeAttribute("data-admin-selected"));
+  clone.querySelectorAll("[data-admin-editing]").forEach((e) => e.removeAttribute("data-admin-editing"));
+  clone.querySelectorAll("[data-admin-modified]").forEach((e) => e.removeAttribute("data-admin-modified"));
+  clone.querySelectorAll("[contenteditable]").forEach((e) => e.removeAttribute("contenteditable"));
+
+  // Remove the <base> we injected for asset resolution
+  const base = clone.querySelector('base[href="https://skdentalgroup.com/"]');
+  if (base) base.remove();
+
+  // Strip inline position:relative we added during selection (best-effort)
+  clone.querySelectorAll('[style*="position: relative"]').forEach((e) => {
+    // Only strip if it's literally just position:relative (we added it).
+    // If the element had other inline styles, leave them.
+    const s = e.getAttribute("style") || "";
+    const cleaned = s
+      .split(";")
+      .map((p) => p.trim())
+      .filter((p) => p && !/^position\s*:\s*relative/i.test(p))
+      .join("; ");
+    if (cleaned !== s.replace(/;\s*$/, "")) {
+      if (cleaned) e.setAttribute("style", cleaned);
+      else e.removeAttribute("style");
+    }
+  });
+
+  return "<!DOCTYPE html>\n" + clone.outerHTML;
+}
+
 async function saveChanges(page) {
-  const newContent = $("#html-editor").value;
-  if (newContent === editorState.originalContent) return;
+  const iframe = $("#preview-frame");
+  const newContent = serializeIframeForSave(iframe);
+  if (!newContent || newContent === editorState.originalContent) {
+    toast("Nothing to save", "");
+    return;
+  }
 
   const btn = $("#btn-save");
   btn.disabled = true;
@@ -424,6 +636,7 @@ async function saveChanges(page) {
     const result = await putFileContent(page.path, newContent, editorState.sha, message);
     editorState.originalContent = newContent;
     editorState.sha = result.content.sha;
+    editorState.dirty = false;
     $("#btn-revert").disabled = true;
     btn.disabled = true;
     btn.textContent = "Save changes";
