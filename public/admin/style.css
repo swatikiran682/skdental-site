@@ -279,6 +279,17 @@ main {
 .stat-pill .stat-label { color: var(--text-light); }
 .stat-pill .stat-value { color: var(--text); font-weight: 600; }
 .stat-pill.live .stat-value { color: var(--success); }
+.stat-pill-link {
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .12s, transform .05s;
+}
+.stat-pill-link:hover {
+  border-color: var(--brand-blue);
+  text-decoration: none;
+}
+.stat-pill-link:active { transform: translateY(1px); }
 .stat-pill .dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -507,6 +518,135 @@ main {
 .editor-meta .modified::before {
   content: "● ";
 }
+
+/* ════════════════════════════════════════════════ */
+/* QR GENERATOR                                      */
+/* ════════════════════════════════════════════════ */
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 800px) { .qr-grid { grid-template-columns: 1fr; } }
+
+.qr-form-card, .qr-preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+}
+.qr-preview-card { padding: 0; overflow: hidden; }
+
+.qr-form-card label {
+  display: block; font-size: 13px; font-weight: 600;
+  margin: 14px 0 6px; color: var(--text);
+}
+.qr-form-card input[type="text"],
+.qr-form-card input[type="url"],
+.qr-form-card select {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 7px;
+  font: inherit; font-size: 14px; background: #fcfdfe;
+}
+.qr-form-card input:focus, .qr-form-card select:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px var(--brand-blue-bg);
+}
+.qr-presets { margin-top: 18px; }
+.preset-buttons {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+}
+.preset-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  font: inherit; font-size: 12px;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: all .12s;
+}
+.preset-btn:hover {
+  border-color: var(--brand-blue);
+  color: var(--brand-blue);
+  background: var(--brand-blue-bg);
+}
+.qr-options { margin-top: 18px; }
+.option-row {
+  display: grid; grid-template-columns: 130px 1fr; align-items: center;
+  gap: 12px; margin-bottom: 12px;
+}
+.option-row label { margin: 0; }
+.option-row input[type="color"] {
+  width: 100%; height: 36px; padding: 2px;
+  border: 1.5px solid var(--border); border-radius: 7px;
+  cursor: pointer;
+}
+.qr-canvas-wrap {
+  display: flex; align-items: center; justify-content: center;
+  padding: 30px; background: #fafbfc;
+  min-height: 420px;
+}
+#qr-canvas {
+  max-width: 100%; height: auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 4px;
+}
+.qr-info { padding: 12px 18px; font-size: 13px; border-top: 1px solid var(--border); }
+.qr-info code {
+  background: var(--brand-blue-bg);
+  color: var(--brand-blue);
+  padding: 1px 5px; border-radius: 3px; font-size: 12px;
+}
+
+/* ════════════════════════════════════════════════ */
+/* SETTINGS FORM                                     */
+/* ════════════════════════════════════════════════ */
+
+.settings-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  max-width: 720px;
+}
+.settings-group-header {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--brand-blue);
+  margin: 24px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--brand-blue-bg);
+}
+.settings-group-header:first-child { margin-top: 0; }
+
+.settings-row {
+  margin-bottom: 16px;
+}
+.settings-row label {
+  display: block; font-size: 13px; font-weight: 600;
+  margin-bottom: 5px; color: var(--text);
+}
+.settings-row input,
+.settings-row textarea {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 7px;
+  font: inherit; font-size: 14px; background: #fcfdfe;
+  color: var(--text);
+  transition: border-color .12s, box-shadow .12s;
+}
+.settings-row input:focus,
+.settings-row textarea:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px var(--brand-blue-bg);
+}
+.settings-row textarea { font-family: inherit; resize: vertical; }
 
 /* ════════════════════════════════════════════════ */
 /* TOAST                                             */

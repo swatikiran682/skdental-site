@@ -89,6 +89,10 @@ function route() {
   } else if (hash.startsWith("#/edit/")) {
     const idx = parseInt(hash.slice("#/edit/".length), 10);
     renderEditor(idx);
+  } else if (hash === "#/settings") {
+    renderSettings();
+  } else if (hash === "#/qr") {
+    renderQR();
   } else {
     location.hash = "#/dashboard";
   }
@@ -220,8 +224,9 @@ async function renderDashboard() {
     grid.appendChild(card);
   });
 
-  // Fetch last deploy time
+  // Fetch last deploy time + visitor stats (if GoatCounter configured)
   fetchLastDeploy();
+  fetchVisitorStats();
 }
 
 async function fetchLastDeploy() {
@@ -237,6 +242,68 @@ async function fetchLastDeploy() {
     const el = $("#last-deploy");
     if (el) el.textContent = "—";
   }
+}
+
+async function fetchVisitorStats() {
+  // Try to read site-settings.json from the live site to find GoatCounter URL
+  let settings = null;
+  try {
+    const file = await getFileContent(SITE_SETTINGS_FILE);
+    settings = JSON.parse(file.content);
+  } catch {
+    return; // No settings file yet
+  }
+
+  const gc = (settings.goatcounter_url || "").replace(/\/$/, "");
+  if (!gc) return;
+
+  // Inject extra stat pills via dynamic dom insertion
+  const row = document.querySelector(".stats-row");
+  if (!row) return;
+
+  const todayPill = document.createElement("a");
+  todayPill.href = gc;
+  todayPill.target = "_blank";
+  todayPill.rel = "noopener";
+  todayPill.className = "stat-pill stat-pill-link";
+  todayPill.title = "Open GoatCounter dashboard";
+  todayPill.innerHTML = `<span class="stat-label">👁 Visits today</span><span class="stat-value" id="visits-today">…</span>`;
+  row.appendChild(todayPill);
+
+  const totalPill = document.createElement("a");
+  totalPill.href = gc;
+  totalPill.target = "_blank";
+  totalPill.rel = "noopener";
+  totalPill.className = "stat-pill stat-pill-link";
+  totalPill.title = "Open GoatCounter dashboard";
+  totalPill.innerHTML = `<span class="stat-label">📊 Last 30 days</span><span class="stat-value" id="visits-30d">…</span>`;
+  row.appendChild(totalPill);
+
+  // GoatCounter has an open /counter endpoint that returns JSON for any path.
+  // For aggregate stats we'd normally need an API token, but we can show a
+  // best-effort number from the public counter for the homepage.
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    // Use the public TOTAL.json endpoint (aggregate count for whole site)
+    const r1 = await fetch(`${gc}/counter/TOTAL.json?start=${today}&end=${today}`);
+    const j1 = r1.ok ? await r1.json() : null;
+    document.getElementById("visits-today").textContent = j1 ? formatNum(j1.count_unique || j1.count || 0) : "—";
+
+    const r2 = await fetch(`${gc}/counter/TOTAL.json?start=${since30}`);
+    const j2 = r2.ok ? await r2.json() : null;
+    document.getElementById("visits-30d").textContent = j2 ? formatNum(j2.count_unique || j2.count || 0) : "—";
+  } catch (e) {
+    // CORS or service down — set to a clickable "View" link
+    document.getElementById("visits-today").textContent = "View →";
+    document.getElementById("visits-30d").textContent = "View →";
+  }
+}
+
+function formatNum(n) {
+  if (n < 1000) return String(n);
+  if (n < 1e6) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return (n / 1e6).toFixed(1) + "M";
 }
 
 function relativeTime(date) {
@@ -368,6 +435,254 @@ async function saveChanges(page) {
     setMeta(`Save failed: ${e.message}`, "modified");
     toast(`Save failed: ${e.message}`, "error");
   }
+}
+
+// ─── QR CODE GENERATOR ──────────────────────────────
+function renderQR() {
+  const main = $("#main");
+  main.innerHTML = `
+    <section class="qr-page">
+      <div class="breadcrumb"><a href="#/dashboard">All pages</a> → QR codes</div>
+      <h2 style="margin:4px 0 6px;">QR Code Generator</h2>
+      <p class="muted" style="margin-bottom:24px;">Print these on business cards, posters, brochures, or share digitally.</p>
+
+      <div class="qr-grid">
+        <div class="qr-form-card">
+          <label for="qr-url">URL or text</label>
+          <input type="text" id="qr-url" value="https://skdentalgroup.com" placeholder="https://...">
+
+          <div class="qr-presets">
+            <span class="muted" style="font-size:12px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;">Quick presets</span>
+            <div class="preset-buttons">
+              <button class="preset-btn" data-url="https://skdentalgroup.com">Homepage</button>
+              <button class="preset-btn" data-url="https://skdentalgroup.com/contact-us/">Contact</button>
+              <button class="preset-btn" data-url="https://skdentalgroup.com/services/general/">Services</button>
+              <button class="preset-btn" data-url="https://skdentalgroup.com/first-visit/">First Visit</button>
+            </div>
+          </div>
+
+          <div class="qr-options">
+            <div class="option-row">
+              <label for="qr-size">Size</label>
+              <select id="qr-size">
+                <option value="200">Small (200px)</option>
+                <option value="400" selected>Medium (400px)</option>
+                <option value="600">Large (600px)</option>
+                <option value="1000">XL print (1000px)</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label for="qr-color">Foreground</label>
+              <input type="color" id="qr-color" value="#0660b0">
+            </div>
+            <div class="option-row">
+              <label for="qr-bg">Background</label>
+              <input type="color" id="qr-bg" value="#ffffff">
+            </div>
+            <div class="option-row">
+              <label for="qr-level">Error correction</label>
+              <select id="qr-level">
+                <option value="L">L (lowest, smallest)</option>
+                <option value="M" selected>M (recommended)</option>
+                <option value="Q">Q</option>
+                <option value="H">H (highest, biggest)</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn-primary-sm" id="qr-download" style="margin-top:18px;width:100%;">Download as PNG</button>
+        </div>
+
+        <div class="qr-preview-card">
+          <div class="panel-header">Preview</div>
+          <div class="qr-canvas-wrap">
+            <canvas id="qr-canvas"></canvas>
+          </div>
+          <div class="qr-info" id="qr-info"></div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const qr = new QRious({
+    element: document.getElementById("qr-canvas"),
+    size: 400,
+    value: "https://skdentalgroup.com",
+    foreground: "#0660b0",
+    background: "#ffffff",
+    level: "M",
+  });
+
+  function refresh() {
+    qr.set({
+      value: $("#qr-url").value || "https://skdentalgroup.com",
+      size: parseInt($("#qr-size").value, 10),
+      foreground: $("#qr-color").value,
+      background: $("#qr-bg").value,
+      level: $("#qr-level").value,
+    });
+    $("#qr-info").innerHTML =
+      `<span class="muted">Encodes <code>${escapeHtml(qr.value)}</code> at ${qr.size}×${qr.size}px</span>`;
+  }
+  refresh();
+
+  $("#qr-url").addEventListener("input", refresh);
+  $$(".preset-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      $("#qr-url").value = b.dataset.url;
+      refresh();
+    })
+  );
+  ["qr-size", "qr-color", "qr-bg", "qr-level"].forEach((id) =>
+    $("#" + id).addEventListener("change", refresh)
+  );
+
+  $("#qr-download").addEventListener("click", () => {
+    const link = document.createElement("a");
+    const fname = "qr-" + (qr.value || "code").replace(/[^a-z0-9]+/gi, "-").slice(0, 40) + ".png";
+    link.download = fname;
+    link.href = $("#qr-canvas").toDataURL("image/png");
+    link.click();
+    toast(`Downloaded ${fname}`, "success");
+  });
+}
+
+// ─── SITE SETTINGS ──────────────────────────────────
+const SITE_SETTINGS_FILE = "public/site-settings.json";
+const DEFAULT_SETTINGS = {
+  phone: "",
+  email: "",
+  address_line1: "",
+  address_line2: "",
+  hours_weekday: "Mon–Fri: 9:00 AM – 5:00 PM",
+  hours_saturday: "Sat: 10:00 AM – 2:00 PM",
+  hours_sunday: "Sun: Closed",
+  doctor_name: "",
+  doctor_bio: "",
+  facebook: "",
+  instagram: "",
+  twitter: "",
+  google_maps: "",
+  // Optional analytics
+  goatcounter_url: "",
+};
+
+async function renderSettings() {
+  const main = $("#main");
+  main.innerHTML = `
+    <section class="settings-page">
+      <div class="breadcrumb"><a href="#/dashboard">All pages</a> → Settings</div>
+      <h2 style="margin:4px 0 6px;">Site Settings</h2>
+      <p class="muted" style="margin-bottom:24px;">Edit clinic info that appears across all pages. Saving updates <code>site-settings.json</code>; the public site reads from this on every page load.</p>
+      <div class="loading">Loading settings…</div>
+    </section>
+  `;
+
+  let settings = { ...DEFAULT_SETTINGS };
+  let sha = null;
+  try {
+    const file = await getFileContent(SITE_SETTINGS_FILE);
+    settings = { ...DEFAULT_SETTINGS, ...JSON.parse(file.content) };
+    sha = file.sha;
+  } catch (e) {
+    if (e.status !== 404) {
+      $(".settings-page .loading").innerHTML = `<div class="error">Failed to load settings: ${escapeHtml(e.message)}</div>`;
+      return;
+    }
+    // 404 → first time; we'll create the file on first save
+  }
+
+  const fields = [
+    { group: "Contact" },
+    { key: "phone", label: "Phone", type: "tel", placeholder: "(701) 555-0123" },
+    { key: "email", label: "Email", type: "email", placeholder: "info@skdentalgroup.com" },
+    { key: "address_line1", label: "Address line 1", type: "text", placeholder: "123 Main St" },
+    { key: "address_line2", label: "Address line 2", type: "text", placeholder: "Fargo, ND 58102" },
+    { key: "google_maps", label: "Google Maps URL", type: "url", placeholder: "https://maps.app.goo.gl/..." },
+
+    { group: "Hours" },
+    { key: "hours_weekday", label: "Weekdays", type: "text" },
+    { key: "hours_saturday", label: "Saturday", type: "text" },
+    { key: "hours_sunday", label: "Sunday", type: "text" },
+
+    { group: "Doctor" },
+    { key: "doctor_name", label: "Doctor name", type: "text", placeholder: "Dr. Sushil Kumar" },
+    { key: "doctor_bio", label: "Doctor bio", type: "textarea", placeholder: "Brief biography…" },
+
+    { group: "Social media (links)" },
+    { key: "facebook", label: "Facebook URL", type: "url", placeholder: "https://facebook.com/skdental" },
+    { key: "instagram", label: "Instagram URL", type: "url" },
+    { key: "twitter", label: "Twitter / X URL", type: "url" },
+
+    { group: "Analytics (optional)" },
+    { key: "goatcounter_url", label: "GoatCounter site URL", type: "url", placeholder: "https://yoursite.goatcounter.com", help: "Sign up free at goatcounter.com. Once set, visitor stats appear on the dashboard." },
+  ];
+
+  let html = `
+    <div class="settings-form-card">
+  `;
+  for (const f of fields) {
+    if (f.group) {
+      html += `<div class="settings-group-header">${escapeHtml(f.group)}</div>`;
+      continue;
+    }
+    const v = settings[f.key] || "";
+    if (f.type === "textarea") {
+      html += `
+        <div class="settings-row">
+          <label for="s-${f.key}">${escapeHtml(f.label)}</label>
+          <textarea id="s-${f.key}" rows="4" placeholder="${escapeHtml(f.placeholder || "")}">${escapeHtml(v)}</textarea>
+          ${f.help ? `<div class="muted" style="margin-top:4px;font-size:12px;">${escapeHtml(f.help)}</div>` : ""}
+        </div>`;
+    } else {
+      html += `
+        <div class="settings-row">
+          <label for="s-${f.key}">${escapeHtml(f.label)}</label>
+          <input type="${f.type}" id="s-${f.key}" value="${escapeHtml(v)}" placeholder="${escapeHtml(f.placeholder || "")}">
+          ${f.help ? `<div class="muted" style="margin-top:4px;font-size:12px;">${escapeHtml(f.help)}</div>` : ""}
+        </div>`;
+    }
+  }
+  html += `
+      <div style="margin-top:24px; display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" id="btn-cancel-settings">Cancel</button>
+        <button class="btn-primary-sm" id="btn-save-settings">Save settings</button>
+      </div>
+    </div>
+  `;
+  $(".settings-page .loading").outerHTML = html;
+
+  $("#btn-cancel-settings").onclick = () => (location.hash = "#/dashboard");
+  $("#btn-save-settings").onclick = async () => {
+    const updated = { ...settings };
+    for (const f of fields) {
+      if (f.group) continue;
+      const el = $("#s-" + f.key);
+      if (el) updated[f.key] = el.value.trim();
+    }
+
+    const btn = $("#btn-save-settings");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+    try {
+      const content = JSON.stringify(updated, null, 2) + "\n";
+      const result = await putFileContent(
+        SITE_SETTINGS_FILE,
+        content,
+        sha,
+        "Update site settings via admin panel"
+      );
+      sha = result.content.sha;
+      toast("Settings saved. Site rebuilding…", "success");
+      btn.textContent = "Save settings";
+    } catch (e) {
+      toast(`Save failed: ${e.message}`, "error");
+      btn.textContent = "Save settings";
+    } finally {
+      btn.disabled = false;
+    }
+  };
 }
 
 // ─── HELPERS ────────────────────────────────────────
