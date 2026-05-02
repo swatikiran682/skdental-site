@@ -556,8 +556,28 @@ function injectVisualEditMode(iframe) {
     if (e.target === selected || (selected && selected.contains(e.target))) {
       markDirty();
       selected.setAttribute("data-admin-modified", "");
+      // If the edited element is or wraps a single anchor with mailto:/tel:,
+      // sync the href to the new visible text. This catches the common
+      // "I edited the email address shown on the page" case where the
+      // mailto: link would otherwise still point at the old address.
+      syncMailtoTelHrefs(selected);
     }
   });
+
+  function syncMailtoTelHrefs(root) {
+    const candidates = root.tagName === "A" ? [root] : root.querySelectorAll("a");
+    candidates.forEach((a) => {
+      const href = (a.getAttribute("href") || "").trim().toLowerCase();
+      if (!href.startsWith("mailto:") && !href.startsWith("tel:")) return;
+      const txt = (a.textContent || "").trim();
+      if (!txt) return;
+      const scheme = href.startsWith("mailto:") ? "mailto:" : "tel:";
+      // For tel:, allow the href to stay clean (digits only)
+      const cleaned = scheme === "tel:" ? txt.replace(/[^\d+]/g, "") : txt;
+      if (!cleaned) return;
+      a.setAttribute("href", scheme + cleaned);
+    });
+  }
 
   // Click outside (in parent) to deselect — use parent message
   win.__exitEdit = clearSelection;
