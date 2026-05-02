@@ -962,6 +962,10 @@ async function consumeUrlToken() {
   const m = location.hash.match(/[#&]t=([^&]+)/);
   if (!m) return false;
   const tok = decodeURIComponent(m[1]);
+  // Clear ALL stored tokens first so the new one wins regardless of which
+  // store getToken() checks first.
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
   localStorage.setItem(TOKEN_KEY, tok);
   // Strip the token from the URL immediately (no server logs, no shoulder-surfing)
   history.replaceState(null, "", location.pathname + location.search + "#/dashboard");
