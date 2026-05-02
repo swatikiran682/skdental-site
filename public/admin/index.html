@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>SK Dental Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOGIN VIEW -->
+<section id="view-login" class="view">
+  <div class="login-card">
+    <h1>SK Dental Admin</h1>
+    <p class="muted">Sign in with your GitHub Personal Access Token to edit the website.</p>
+
+    <label for="pat">GitHub Personal Access Token</label>
+    <input id="pat" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false" />
+
+    <label class="row">
+      <input id="remember" type="checkbox" checked>
+      <span>Keep me signed in on this browser</span>
+    </label>
+
+    <button id="btn-login" class="btn-primary">Sign in</button>
+
+    <details class="help">
+      <summary>How do I get a token?</summary>
+      <ol>
+        <li>Open <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github.com/settings/tokens</a></li>
+        <li>Click <strong>Generate new token</strong> (fine-grained)</li>
+        <li>Name it <code>skdental-admin</code>, expiration 90 days</li>
+        <li>Repository access: <strong>Only select repositories</strong> → <code>skdental-site</code></li>
+        <li>Permissions → Repository permissions → <strong>Contents: Read and write</strong></li>
+        <li>Click <strong>Generate token</strong>, copy it, paste above</li>
+      </ol>
+    </details>
+
+    <p id="login-error" class="error hidden"></p>
+  </div>
+</section>
+
+<!-- APP SHELL (dashboard + editor) -->
+<section id="view-app" class="view hidden">
+  <header class="topbar">
+    <a href="#/dashboard" class="brand">SK Dental Admin</a>
+    <nav>
+      <a href="#/dashboard">Pages</a>
+      <a href="https://skdentalgroup.com" target="_blank" rel="noopener">View site ↗</a>
+      <button id="btn-logout" class="btn-link">Sign out</button>
+    </nav>
+  </header>
+
+  <main id="main"></main>
+</section>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="pages-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
