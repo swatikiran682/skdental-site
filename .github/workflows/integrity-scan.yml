@@ -1,0 +1,80 @@
+name: Daily site integrity scan
+
+on:
+  schedule:
+    - cron: '0 14 * * *'   # 14:00 UTC = 9am Central, 7am Pacific
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for baseline hashes)
+        uses: actions/checkout@v4
+
+      - name: Scan live site for tampering / suspicious patterns
+        id: scan
+        run: |
+          set +e
+          BASE="https://skdentalgroup.com"
+          PAGES=(/ /doctor /first-visit /insurance /contact-us /services/general /services/preventive /services/pediatric /services/cosmetic)
+
+          # Patterns common in WordPress/PHP/JS malware. If any of these appear
+          # on a static site that should NOT have them, alert.
+          BAD_PATTERNS=(
+            'eval\s*\('
+            'base64_decode\s*\('
+            'gzinflate\s*\('
+            'document\.write\s*\(\s*unescape\s*\('
+            'fromCharCode\s*\(.*\)\.repeat'
+            'iframe[^>]*src=["'"'"']https?://(?!www\.googletagmanager|www\.google-analytics|www\.google\.com|js\.hcaptcha|hcaptcha|gc\.zgo\.at|www\.skdentalgroup)'
+            'viagra|cialis|casino|porn|xxx-|sexy-g'
+            '<script[^>]*src=["'"'"']https?://(?!www\.googletagmanager|www\.google-analytics|ajax\.googleapis|maxcdn\.bootstrapcdn|cdnjs\.cloudflare|use\.fontawesome|gc\.zgo\.at|fonts\.googleapis|skdentalgroup)'
+          )
+
+          findings=""
+          for path in "${PAGES[@]}"; do
+            url="${BASE}${path}"
+            body=$(curl -sL --max-time 30 "$url")
+            if [ -z "$body" ]; then
+              findings+="\n  - FETCH_FAIL $url"
+              continue
+            fi
+            for pat in "${BAD_PATTERNS[@]}"; do
+              hit=$(echo "$body" | grep -iE "$pat" | head -1)
+              if [ -n "$hit" ]; then
+                findings+="\n  - SUSPICIOUS_PATTERN $url\n    matched /$pat/\n    sample: ${hit:0:120}"
+              fi
+            done
+          done
+
+          if [ -z "$findings" ]; then
+            echo "OK — no suspicious patterns detected on $(date -u)"
+            echo "result=clean" >> $GITHUB_OUTPUT
+          else
+            echo "FINDINGS:$findings"
+            echo "result=alert" >> $GITHUB_OUTPUT
+            {
+              echo 'findings<<EOF'
+              echo -e "$findings"
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          fi
+
+      - name: Open issue on alert
+        if: steps.scan.outputs.result == 'alert'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const findings = `${{ steps.scan.outputs.findings }}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[ALERT] Daily integrity scan flagged suspicious content (${new Date().toISOString().slice(0,10)})`,
+              body: `# Site integrity scan alert\n\nThe daily scan detected patterns commonly associated with malware on the live site.\n\n## Findings\n\n${findings}\n\n## What to do\n\n1. Visit the affected URLs in a browser to confirm the issue\n2. Check the latest commits on \`main\` for unauthorized changes: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commits/main\n3. If you find an unauthorized commit, revert it: \`git revert <commit-sha>\` and push\n4. Rotate your Firebase service account key + GitHub PAT (see SECURITY-TODO.md)\n\nThis issue was opened automatically by \`.github/workflows/integrity-scan.yml\`.`,
+              labels: ['security', 'auto-generated']
+            });
