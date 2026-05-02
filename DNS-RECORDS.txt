@@ -1,0 +1,40 @@
+DNS RECORDS FOR skdentalgroup.com
+Captured 2026-05-02 from Firebase Hosting custom domain wizard
+Project: sk-dentals-142f5
+
+============================================================
+ADD THESE TO GoDaddy DNS:
+============================================================
+
+A record
+  Name:  @
+  Value: 199.36.158.100
+  TTL:   600 (10 minutes - lower than default 3600 so we can fix mistakes fast)
+
+TXT record
+  Name:  @
+  Value: hosting-site=sk-dentals-142f5
+  TTL:   600
+
+============================================================
+DELETE FROM GoDaddy DNS:
+============================================================
+
+A record
+  Name:  @
+  Value: 107.180.9.68   <-- the old GoDaddy parking page IP
+
+(Also delete any other A records pointing to '@' that don't match 199.36.158.100)
+
+============================================================
+LATER - for www.skdentalgroup.com:
+============================================================
+
+After the apex domain (skdentalgroup.com) verifies in Firebase, repeat the
+"Add custom domain" flow for www.skdentalgroup.com. Firebase will then ask
+you to add a CNAME:
+
+CNAME record
+  Name:  www
+  Value: sk-dentals-142f5.web.app
+  TTL:   600

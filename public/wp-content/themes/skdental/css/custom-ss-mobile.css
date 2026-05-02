@@ -1,0 +1,264 @@
+@media only screen and (min-width:320px) and (max-width:860px)
+{   .custom-ss-video{
+       width:300px;
+       height:200px;  
+    }
+    .custom-ss-qualification{
+        font-size:20px;
+        color:#0660b0;
+        padding-right:2px;
+        width:30%;
+        float: left;
+      }
+    .custom-ss-edu-text{
+        width:67%;
+    }
+    .custom-ss-doc-pic{
+        text-align: center!important;
+    }
+    .custom-ss-first-visit{
+        padding:23px 0px;
+    }
+    .custom-ss-page-block{
+        font-size:23px;
+    }
+    .custom-ss-overlay a{
+        font-size:25px;
+    }
+    .custom-ss-pic{
+        float: none!important;
+    }
+    .custom-ss-info{
+        padding:0px;
+    }
+    .custom-ss-more{
+        margin-top:0!important;
+      }
+    .custom-ss-prev-icon{
+        left:-40px;
+        height:30px;
+        width:30px;
+    }
+    .custom-ss-next-icon{
+        right:-40px;
+        height:30px;
+        width:30px;
+    }
+    .dropdown-toggle::after{
+        margin-left:0!important;
+        margin-top:0!important;
+        margin-right:0!important;
+    }
+    .custom-ss-inner-right-pad{
+        padding-right:15px;
+    }
+    .custom-ss-inner-left-pad{
+        padding-left:15px;
+    }
+    .custom-ss-edu-text{
+        float: right;
+    }
+    .custom-ss-btn{
+        padding: 10px 15px;
+    }
+    .custom-ss-name{
+        font-size:19px;
+    }
+    .custom-ss-patient{
+        font-size:19px;
+    }
+    .custom-ss-welcome-quote{
+        font-size:17px;
+    }
+    
+    .custom-ss-image-text{
+        font-size:19px;
+    }
+    .overlay a {font-size: 20px}
+    .overlay .closebtn  {
+        font-size: 40px;
+        top: 15px;
+        right: 35px;
+    }
+    .custom-ss-show-mobile{
+        display: block;
+    }
+   .snip1135 a:after {
+     left: 8px;
+     top: 0px;
+    }
+    .custom-ss-cont{
+      display: none;
+    }
+    .custom-ss-test-monials{
+        padding:0px;
+    }
+    .custom-ss-slider{
+        padding:0px;
+    }
+    .custom-ss-coma-img{
+        height:10px;
+        width: 20px;
+    }
+    .custom-ss-visit-img{
+        margin-bottom:20px;
+    }
+    .custom-ss-doctor-background{
+        padding:35px 0px;
+    }
+    .custom-ss-doctor-video{
+        text-align:center;
+        margin:20px 0px;
+    }
+    .custom-ss-checkup-image{
+        margin-top:20px;
+    }
+    .custom-ss-comma{
+    margin:50px 0px;
+    height:10px;
+    width:20px;
+    padding:0px;
+    }
+    .custom-ss-welcome-block{
+        padding:60px 0px;
+    }
+    .custom-ss-welcome-block-heading-welcome{
+        margin-top:0px!important;
+    }
+    .custom-ss-welcome-block-heading{
+        margin-top:20px;
+    }
+   .custom-ss-intro{
+     padding:0;
+   }
+    .custom-ss-info{
+      border-right:none;
+    }
+    .custom-ss-services-heading {
+        font-size: 18px;
+        color: #333333;
+        border: none;
+        cursor: pointer;
+    }
+    .custom-ss-info-insurance-block{
+        margin:20px 0px;
+    }
+    .custom-ss-read-more{
+        margin-top:0!important;
+    }
+    
+   .custom-ss-quote {
+    font-size: 18px;
+    font-weight: bold;
+   }
+   p{
+     font-size:18px;
+   }
+   .custom-ss-pic{
+     text-align: center;
+   }
+   .custom-ss-doctor-info{
+     padding-right:0;
+   }
+   .custom-ss-name{
+       margin-top:15px;
+   }
+   .custom-ss-about-background{
+       padding:0;
+   }
+   .custom-ss-about{
+       font-size:24px;
+   }
+   .custom-ss-footer {
+     margin-top:20px;
+     margin-left:20px!important;
+     margin-bottom:5px;
+   }
+   .custom-ss-footer-logo{
+       padding:0px!important;
+   }
+   .custom-ss-footer-icon-block{
+       margin:0px;
+   }
+   .custom-ss-footer-icon{
+       margin-bottom:15px;
+   }
+   .custom-ss-get{
+       padding:0px !important;
+   }
+   .custom-ss-banner{
+    height:250px;
+   }
+   .custom-ss-form-control{
+    width:100%;
+   }
+    .custom-ss-submit{
+    background:#0660b0;
+    width:100%;
+    height:40px;
+    color:#ffffff;
+   } 
+   ul.dropdown-menu.show {
+    float: none;
+    width: 150px;
+    margin-top: 0;
+    border: 0;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    position: static !important;
+    float: none;
+    transform: translate3d(0px, 0px, 0px) !important;
+    text-align: left;
+    border-radius: 3px;
+    padding: 0;
+    padding-left:2px;
+    margin:0 auto;
+}
+ul.dropdown-menu.show li:hover a{
+    background: #ccc;
+}
+ul.dropdown-menu.show li a{
+    color: #333;
+    font-size: 16px;
+    transition: none;
+    text-decoration: none;
+}
+
+      
+}
+@media (min-width: 1200px)
+  {
+.container {
+    max-width: 1215px;
+}
+}
+@media only screen and (min-width: 320px) and (max-width:768px)
+{
+.custom-ss-snip1135 a:after {
+    left: 0px !important
+}
+.custom-ss-dropdown-toggle::after{
+    margin-top:0;
+    margin-left:0;
+}
+.custom-ss-snip1135 a:hover:before, .custom-ss-snip1135 .current a:before {
+    opacity: 1;
+    width: 100% !important;
+}
+.custom-ss-snip1135 a:before,
+.custom-ss-snip1135 a:after {
+  position: absolute;
+  -webkit-transition: all 0.8s ease-in-out !important;
+  transition: all 0.8s ease-in-out !important;
+}
+}
+@media only screen and (min-width: 768px) and (max-width:1024px)
+{
+  .custom-ss-snip1135 a:after {
+    left: 0px !important
+}
+.custom-ss-snip1135 a:hover:before, .custom-ss-snip1135 .current a:before {
+    opacity: 1;
+    width: 100%;
+}
+}
