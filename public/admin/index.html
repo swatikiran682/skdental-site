@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>SK Dental Admin</title>
+<link rel="icon" href="/wp-content/themes/skdental/img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,8 +16,9 @@
 <!-- LOGIN VIEW -->
 <section id="view-login" class="view">
   <div class="login-card">
-    <h1>SK Dental Admin</h1>
-    <p class="muted">Sign in with your GitHub Personal Access Token to edit the website.</p>
+    <img src="/wp-content/themes/skdental/img/logo.png" alt="SK Dental" class="login-logo">
+    <h1>Admin Panel</h1>
+    <p class="lede">Sign in to edit content on skdentalgroup.com</p>
 
     <label for="pat">GitHub Personal Access Token</label>
     <input id="pat" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false" />
@@ -41,13 +46,17 @@
   </div>
 </section>
 
-<!-- APP SHELL (dashboard + editor) -->
+<!-- APP SHELL -->
 <section id="view-app" class="view hidden">
   <header class="topbar">
-    <a href="#/dashboard" class="brand">SK Dental Admin</a>
+    <a href="#/dashboard" class="brand">
+      <img src="/wp-content/themes/skdental/img/logo.png" alt="SK Dental">
+      <span class="brand-tag">ADMIN</span>
+    </a>
     <nav>
       <a href="#/dashboard">Pages</a>
       <a href="https://skdentalgroup.com" target="_blank" rel="noopener">View site ↗</a>
+      <span class="user-chip" id="user-chip">—</span>
       <button id="btn-logout" class="btn-link">Sign out</button>
     </nav>
   </header>

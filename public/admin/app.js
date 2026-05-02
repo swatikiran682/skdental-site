@@ -117,7 +117,8 @@ function showLogin() {
 function showApp(user) {
   $("#view-login").classList.add("hidden");
   $("#view-app").classList.remove("hidden");
-  $(".brand").textContent = `SK Dental Admin — ${user.login}`;
+  const chip = $("#user-chip");
+  if (chip) chip.textContent = user.login;
   route();
 }
 
@@ -173,12 +174,35 @@ function logout() {
 }
 
 // ─── DASHBOARD ──────────────────────────────────────
-function renderDashboard() {
+async function renderDashboard() {
   const main = $("#main");
   main.innerHTML = `
     <section class="dashboard">
-      <h1>Pages you can edit</h1>
-      <p class="subtitle">Click a page to open the editor. Saving commits to GitHub and the live site updates within ~60 seconds.</p>
+      <div class="dashboard-hero">
+        <div>
+          <h1>Pages you can edit</h1>
+          <p class="subtitle">Click a page to open the editor. Saving commits to GitHub and the live site updates within ~60 seconds.</p>
+        </div>
+        <div class="stats-row" id="stats-row">
+          <div class="stat-pill live">
+            <span class="dot"></span>
+            <span class="stat-label">Site</span>
+            <span class="stat-value">Live</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">Pages</span>
+            <span class="stat-value">${EDITABLE_PAGES.length}</span>
+          </div>
+          <div class="stat-pill" id="last-deploy-pill">
+            <span class="stat-label">Last deploy</span>
+            <span class="stat-value" id="last-deploy">…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h2>All pages</h2>
+      </div>
       <div class="page-grid" id="page-grid"></div>
     </section>
   `;
@@ -188,12 +212,39 @@ function renderDashboard() {
     card.className = "page-card";
     card.href = `#/edit/${i}`;
     card.innerHTML = `
+      <div class="icon">${p.icon || "📄"}</div>
       <h3>${escapeHtml(p.title)}</h3>
-      <div class="muted">${escapeHtml(p.description)}</div>
-      <div class="path">${escapeHtml(p.path)}</div>
+      <div class="desc">${escapeHtml(p.description)}</div>
+      <span class="path">${escapeHtml(p.path.replace(/^public\//, "/"))}</span>
     `;
     grid.appendChild(card);
   });
+
+  // Fetch last deploy time
+  fetchLastDeploy();
+}
+
+async function fetchLastDeploy() {
+  try {
+    const runs = await ghRequest(`/repos/${REPO.owner}/${REPO.name}/actions/runs?per_page=1`);
+    if (runs && runs.workflow_runs && runs.workflow_runs[0]) {
+      const r = runs.workflow_runs[0];
+      const time = relativeTime(new Date(r.created_at));
+      const el = $("#last-deploy");
+      if (el) el.textContent = time;
+    }
+  } catch (e) {
+    const el = $("#last-deploy");
+    if (el) el.textContent = "—";
+  }
+}
+
+function relativeTime(date) {
+  const sec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  return `${Math.floor(sec / 86400)}d ago`;
 }
 
 // ─── EDITOR ─────────────────────────────────────────
@@ -207,8 +258,10 @@ async function renderEditor(idx) {
   main.innerHTML = `
     <div class="editor-header">
       <div>
-        <a href="#/dashboard">← All pages</a>
-        <h2>${escapeHtml(page.title)}</h2>
+        <div class="breadcrumb">
+          <a href="#/dashboard">All pages</a> → ${escapeHtml(page.title)}
+        </div>
+        <h2>${escapeHtml(page.icon || "📄")} ${escapeHtml(page.title)}</h2>
       </div>
       <div class="actions">
         <button class="btn" id="btn-revert" disabled>Revert</button>
